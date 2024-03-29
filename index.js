@@ -37,6 +37,13 @@ client.command('toimg', async (ctx) => {
     }
 });
 
+client.command('tostkr', async (ctx) => {
+    const reply = ctx.getReply()
+    if (reply?.image) {
+        ctx.replyWithSticker(await reply.image.retrieveFile("image"))
+    }
+});
+
 client.command('stele', async (ctx) => {
     const args = ctx.text.split(" ");
     try {
