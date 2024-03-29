@@ -44,6 +44,12 @@ client.command('tostkr', async (ctx) => {
     }
 });
 
+client.command('menu', (ctx) => {
+    const commands = ['tostkr', 'toimg', 'ping', 'stele'].map(cmd => ctx.getPrefix()+cmd)
+    const text = `Current available commands:\n${commands.join('\n')}`
+    ctx.reply(text);
+}, { aliases: ['help']})
+
 client.command('stele', async (ctx) => {
     const args = ctx.text.split(" ");
     try {
