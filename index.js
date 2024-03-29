@@ -30,6 +30,13 @@ client.command('test', (ctx) => ctx.reply('pong'), {
     }
 );
 
+client.command('toimg', async (ctx) => {
+    const reply = ctx.getReply()
+    if (reply?.sticker) {
+        ctx.replyWithPhoto(await reply.sticker.retrieveFile("sticker"))
+    }
+});
+
 client.command('stele', async (ctx) => {
     const args = ctx.text.split(" ");
     try {
