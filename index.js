@@ -23,7 +23,13 @@ const client = new Client(session,
 client.on('ready', () => {
     console.log(client.raw?.user, 'ready');
 });
-  
+
+client.command('test', (ctx) => ctx.reply('pong'), {
+        aliases: ['ping', 'pong'],
+        cooldown: 1_000,
+    }
+);
+
 client.command('stele', async (ctx) => {
     const args = ctx.text.split(" ");
     try {
