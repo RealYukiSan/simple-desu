@@ -61,7 +61,7 @@ client.command('stele', async (ctx) => {
             ctx.raw.key.remoteJid = ctx.raw.key.participant
             files.result.stickers.forEach(async (file) => {
                 const st = await fetch(`https://api.telegram.org/bot${process.env.TELE_TOKEN}/getFile?file_id=${file.file_id}`).then(res => res.json()).catch(console.log);
-                if (st.ok) {
+                if (st?.ok) {
                     const sticker = await fetch(`https://api.telegram.org/file/bot${process.env.TELE_TOKEN}/${st.result.file_path}`).catch(console.log);
                     await ctx.replyWithSticker(sticker).catch(console.log);
                 }
