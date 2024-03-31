@@ -1,4 +1,5 @@
 const path = require("node:path");
+const { get } = require("node:https");
 const { Client, SessionManager } = require("gampang");
 require("dotenv").config();
 
@@ -70,8 +71,10 @@ client.command("stele", async (ctx) => {
 		);
 		files = JSON.parse(files.toString());
 		if (files.ok) {
-			if (ctx.isGroup) await ctx.reply("CPM kak.");
-			ctx.raw.key.remoteJid = ctx.raw.key.participant;
+			if (ctx.isGroup) {
+				await ctx.reply("CPM kak.");
+				ctx.raw.key.remoteJid = ctx.raw.key.participant;
+			}
 			files.result.stickers.forEach(async (file) => {
 				let st = await fetch(
 					`https://api.telegram.org/bot${process.env.TELE_TOKEN}/getFile?file_id=${file.file_id}`
