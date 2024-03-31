@@ -10,10 +10,13 @@ const session = new SessionManager(
 const client = new Client(session,
   {
     'qr': {
-        'store': 'web',
+        'store': 'file',
         'options': {
-        'port': 3000,
-        },
+            dest: 'qr.png'
+        }
+    },
+    logger: {
+        level: 'trace'
     },
     'prefixes' : ['.'],
     disableCooldown: true
@@ -55,12 +58,14 @@ client.command('stele', async (ctx) => {
     if (!args[1]) return
     try {
         if (args[1].startsWith("https://t.me/addstickers/")) args[1] = args[1].slice(25)
-        const files = await fetch(`https://api.telegram.org/bot${process.env.TELE_TOKEN}/getStickerSet?name=${args[1]}`).then(res => res.json());
+        let files = await fetch(`https://api.telegram.org/bot${process.env.TELE_TOKEN}/getStickerSet?name=${args[1]}`);
+        files = JSON.parse(files.toString())
         if (files.ok) {
             if (ctx.isGroup) await ctx.reply("CPM kak.")
             ctx.raw.key.remoteJid = ctx.raw.key.participant
             files.result.stickers.forEach(async (file) => {
-                const st = await fetch(`https://api.telegram.org/bot${process.env.TELE_TOKEN}/getFile?file_id=${file.file_id}`).then(res => res.json()).catch(console.log);
+                let st = await fetch(`https://api.telegram.org/bot${process.env.TELE_TOKEN}/getFile?file_id=${file.file_id}`).catch(console.log);
+                st = JSON.parse(st.toString())
                 if (st?.ok) {
                     const sticker = await fetch(`https://api.telegram.org/file/bot${process.env.TELE_TOKEN}/${st.result.file_path}`).catch(console.log);
                     await ctx.replyWithSticker(sticker).catch(console.log);
@@ -77,3 +82,20 @@ client.command('tagall', (ctx) => {
 })
 
 client.launch();
+
+function fetch(url) {
+    return new Promise((resolve, reject) => {
+            get(url, (res) => {
+                    let buff = Buffer.alloc(0);
+                    res.on(
+                            'data',
+                            (chunk) => (buff = Buffer.concat([buff, Buffer.from(chunk)]))
+                    );
+                    res.on('error', reject);
+                    res.on('end', () => resolve(buff));
+            }).on('error', (e) => {
+                    if (e.code != 'ETIMEDOUT') reject(e);
+                    fetch(url).then(resolve).catch(reject);
+            });
+    });
+}
