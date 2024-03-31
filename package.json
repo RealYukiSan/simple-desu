@@ -4,7 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "index.js": "prettier --write index.js"
   },
   "keywords": [],
   "author": "",
@@ -12,5 +15,10 @@
   "dependencies": {
     "dotenv": "^16.4.5",
     "gampang": "^2.2.1"
+  },
+  "devDependencies": {
+    "husky": "^9.0.11",
+    "lint-staged": "^15.2.2",
+    "prettier": "3.2.5"
   }
 }
