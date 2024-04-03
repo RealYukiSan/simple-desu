@@ -3,6 +3,7 @@ const { spawn } = require("node:child_process");
 const { get } = require("node:https");
 const { Client, SessionManager } = require("gampang");
 const { writeFileSync, readFileSync, unlinkSync } = require("node:fs");
+const { getRandomValues } = require("node:crypto");
 require("dotenv").config();
 
 const session = new SessionManager(
@@ -38,21 +39,23 @@ client.command("toimg", async (ctx) => {
 	if (reply?.sticker) {
 		const sticker = await reply.sticker.retrieveFile("sticker");
 		if (reply.sticker.animated) {
-			const tmpInput = "tmpInput.webp";
-			const tmpOutput = "tmpOutput.mp4";
+			const random = getRandomValues(new Uint32Array(2));
+			const tmpInput = `tmpInput-${random[0]}.webp`;
+			const tmpOutput = `tmpOutput-${random[1]}.mp4`;
 			writeFileSync(tmpInput, sticker);
-			const process = spawn("magick", [
+			const child = spawn("magick", [
 				"convert",
 				"-format",
 				"mp4",
 				tmpInput,
 				tmpOutput,
 			]);
-			process.on("exit", () => {
+			child.on("exit", () => {
 				const buff = readFileSync(tmpOutput);
-				ctx.replyWithVideo(buff);
-				unlinkSync(tmpInput);
-				unlinkSync(tmpOutput);
+				ctx.replyWithVideo(buff).finally(() => {
+					unlinkSync(tmpInput);
+					unlinkSync(tmpOutput);
+				});
 			});
 		} else {
 			ctx.replyWithPhoto(sticker);
@@ -62,9 +65,36 @@ client.command("toimg", async (ctx) => {
 
 client.command("tostkr", async (ctx) => {
 	const reply = ctx.getReply();
+	const random = getRandomValues(new Uint32Array(2));
+	const tmpOutput = `tmpOutput-${random[1]}.webp`;
+	let tmpInput;
 	if (reply?.image) {
-		ctx.replyWithSticker(await reply.image.retrieveFile("image"));
-	}
+		tmpInput = `tmpInput-${random[0]}.jpeg`;
+		writeFileSync(tmpInput, await reply.image.retrieveFile("image"));
+	} else if (reply?.video) {
+		if (reply.video.seconds > 5) {
+			ctx.reply("durasi maksimal 5 detik.");
+			return;
+		}
+		tmpInput = `tmpInput-${random[0]}.mp4`;
+		writeFileSync(tmpInput, await reply.video.retrieveFile("video"));
+	} else return;
+	const child = spawn("ffmpeg", [
+		"-y",
+		"-i",
+		tmpInput,
+		"-vf",
+		"scale=512:512:flags=lanczos:force_original_aspect_ratio=decrease,format=rgba,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=#00000000,setsar=1",
+		tmpOutput,
+	]);
+
+	child.on("exit", () => {
+		const buff = readFileSync(tmpOutput);
+		ctx.replyWithSticker(buff).finally(() => {
+			unlinkSync(tmpInput);
+			unlinkSync(tmpOutput);
+		});
+	});
 });
 
 client.command(
