@@ -1,6 +1,8 @@
 const path = require("node:path");
+const { spawn } = require("node:child_process");
 const { get } = require("node:https");
 const { Client, SessionManager } = require("gampang");
+const { writeFileSync, readFileSync, unlinkSync } = require("node:fs");
 require("dotenv").config();
 
 const session = new SessionManager(
@@ -34,7 +36,27 @@ client.command("test", (ctx) => ctx.reply("pong"), {
 client.command("toimg", async (ctx) => {
 	const reply = ctx.getReply();
 	if (reply?.sticker) {
-		ctx.replyWithPhoto(await reply.sticker.retrieveFile("sticker"));
+		const sticker = await reply.sticker.retrieveFile("sticker");
+		if (reply.sticker.animated) {
+			const tmpInput = "tmpInput.webp";
+			const tmpOutput = "tmpOutput.mp4";
+			writeFileSync(tmpInput, sticker);
+			const process = spawn("magick", [
+				"convert",
+				"-format",
+				"mp4",
+				tmpInput,
+				tmpOutput,
+			]);
+			process.on("exit", () => {
+				const buff = readFileSync(tmpOutput);
+				ctx.replyWithVideo(buff);
+				unlinkSync(tmpInput);
+				unlinkSync(tmpOutput);
+			});
+		} else {
+			ctx.replyWithPhoto(sticker);
+		}
 	}
 });
 
@@ -84,7 +106,11 @@ client.command("stele", async (ctx) => {
 					const sticker = await fetch(
 						`https://api.telegram.org/file/bot${process.env.TELE_TOKEN}/${st.result.file_path}`
 					).catch(console.log);
-					await ctx.replyWithSticker(sticker).catch(console.log);
+					await ctx
+						.replyWithSticker(sticker, {
+							isAnimated: file.is_animated,
+						})
+						.catch(console.log);
 				}
 			});
 		} else ctx.reply("invalid sticker name or url");
