@@ -1,5 +1,5 @@
 const path = require("node:path");
-const { spawn } = require("node:child_process");
+const { spawn, spawnSync } = require("node:child_process");
 const { get } = require("node:https");
 const { Client, SessionManager } = require("gampang");
 const { writeFileSync, readFileSync, unlinkSync } = require("node:fs");
@@ -123,7 +123,7 @@ client.command("stele", async (ctx) => {
 		);
 		files = JSON.parse(files.toString());
 		if (files.ok) {
-			if (ctx.isGroup) {
+			if (ctx.raw.key.participant) {
 				await ctx.reply("CPM kak.");
 				ctx.raw.key.remoteJid = ctx.raw.key.participant;
 			}
@@ -133,14 +133,28 @@ client.command("stele", async (ctx) => {
 				).catch(console.log);
 				st = JSON.parse(st.toString());
 				if (st?.ok) {
-					const sticker = await fetch(
+					let sticker = await fetch(
 						`https://api.telegram.org/file/bot${process.env.TELE_TOKEN}/${st.result.file_path}`
 					).catch(console.log);
+					let tmpOutput;
+					let tmpInput;
+					if (file.is_animated) {
+						const random = getRandomValues(new Uint32Array(2));
+						tmpOutput = `tmpOutput-${random[1]}.webp`;
+						tmpInput = `tmpInput-${random[0]}.tgs`;
+						writeFileSync(tmpInput, sticker);
+						spawnSync("tgswebp", [tmpInput, "-o", tmpOutput]);
+						sticker = readFileSync(tmpOutput);
+					}
 					await ctx
 						.replyWithSticker(sticker, {
 							isAnimated: file.is_animated,
 						})
 						.catch(console.log);
+					if (file.is_animated) {
+						unlinkSync(tmpOutput);
+						unlinkSync(tmpInput);
+					}
 				}
 			});
 		} else ctx.reply("invalid sticker name or url");
